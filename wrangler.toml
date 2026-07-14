@@ -1,0 +1,10 @@
+name = "shimi-sync"
+main = "src/worker.js"
+compatibility_date = "2026-07-01"
+
+# データの保存先（KV）。id は
+#   npx wrangler kv namespace create SYNC
+# で作成したときに表示されたもの。
+[[kv_namespaces]]
+binding = "SYNC"
+id = "ac76e01c8d8346e7bddedfe529986f0b"
