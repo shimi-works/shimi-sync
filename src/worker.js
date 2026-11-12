@@ -7,8 +7,23 @@
 //
 // 認証はコードそのもの（推測不能な長さのランダム文字列）。オリジン制限はしない
 // （コードを知らない相手には何も読めない設計のため）。
+//
+// コードは normalizeCode で正規形にそろえてから照合する（小文字・ハイフンなし・
+// URLエンコード等の表記ゆれを吸収）。正規形のコードは変わらないため移行は不要。
 
 const CODE_RE = /^[A-HJ-NP-Z2-9]{4}(-[A-HJ-NP-Z2-9]{4}){4}$/; // 紛らわしい文字(I,L,O,0,1)抜き・約99bit
+
+// コードの正規化: 届いたコードを正規形 (XXXX-XXXX-XXXX-XXXX-XXXX) にそろえる。
+// 小文字化・ハイフン除去・URLエンコードなどの「表記のゆれ」を吸収するためのもので、
+// 正規形のコードは正規化しても変わらないため、既存のKVキーはそのまま使える。
+function normalizeCode(raw) {
+  let s = raw;
+  try { s = decodeURIComponent(s); } catch { /* デコードできない場合はそのまま使う */ }
+  s = s.toUpperCase().replace(/[^A-HJ-NP-Z2-9]/g, "");
+  if (s.length !== 20) return null;
+  const grouped = [0, 1, 2, 3, 4].map(i => s.slice(i * 4, i * 4 + 4)).join("-");
+  return CODE_RE.test(grouped) ? grouped : null;
+}
 const APP_RE = /^[a-z0-9-]{1,32}$/;
 const MAX_BYTES = 2_000_000; // 1blobの上限（localStorage全体より十分大きい）
 
@@ -31,8 +46,9 @@ export default {
 
     const m = new URL(request.url).pathname.match(/^\/v1\/([^/]+)\/([^/]+)$/);
     if (!m) return json(404, { error: "not_found" });
-    const [, app, code] = m;
-    if (!APP_RE.test(app) || !CODE_RE.test(code)) return json(400, { error: "bad_app_or_code" });
+    const [, app, rawCode] = m;
+    const code = normalizeCode(rawCode);
+    if (!APP_RE.test(app) || !code) return json(400, { error: "bad_app_or_code" });
     const key = `${app}:${code}`;
 
     if (request.method === "GET") {
