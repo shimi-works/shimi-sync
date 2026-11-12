@@ -48,20 +48,7 @@ export default {
     if (!m) return json(404, { error: "not_found" });
     const [, app, rawCode] = m;
     const code = normalizeCode(rawCode);
-    if (!APP_RE.test(app) || !code) {
-      // 一時診断: 受け取ったコードの「形」だけを返す（中身そのものは返さない）
-      let cleaned = null, decodeThrew = false;
-      try { cleaned = decodeURIComponent(rawCode).toUpperCase().replace(/[^A-HJ-NP-Z2-9]/g, ""); }
-      catch { decodeThrew = true; }
-      const count = (re) => (rawCode.match(re) || []).length;
-      return json(400, { error: "bad_app_or_code", debug: {
-        app, appOk: APP_RE.test(app),
-        codeLen: rawCode.length,
-        upper: count(/[A-Z]/g), lower: count(/[a-z]/g), digit: count(/[0-9]/g),
-        hyphen: count(/-/g), percent: count(/%/g),
-        cleanedLen: cleaned === null ? null : cleaned.length, decodeThrew,
-      } });
-    }
+    if (!APP_RE.test(app) || !code) return json(400, { error: "bad_app_or_code" });
     const key = `${app}:${code}`;
 
     if (request.method === "GET") {
